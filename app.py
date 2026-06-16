@@ -26,7 +26,7 @@ st.set_page_config(
  
  
 @st.cache_data
-def load_results(path: str = "/Users/nickbourgeois/Documents/python/world-cup-tournament-challenge/data/sim_results.parquet") -> pd.DataFrame:
+def load_results(path: str = "sim_results.parquet") -> pd.DataFrame:
     # If you saved JSON instead: return pd.read_json(path, orient="records")
     return pd.read_parquet(path)
  
