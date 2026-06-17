@@ -10,6 +10,9 @@ Run locally with:  streamlit run app.py
  
 import pandas as pd
 import streamlit as st
+
+import re
+from pathlib import Path
  
 STAGE_LABELS = {
     1: "Round of 32",
@@ -23,10 +26,13 @@ STAGE_LABELS = {
 st.set_page_config(
     page_title="World Cup 2026 Probabilities", page_icon="⚽", layout="wide"
 )
- 
+
+
+DATA_DIR = Path(__file__).parent / "data"
+file_path = DATA_DIR.glob("sim_results.parquet")
  
 @st.cache_data
-def load_results(path: str = "./data/sim_results.parquet") -> pd.DataFrame:
+def load_results(path: str = file_path) -> pd.DataFrame:
     # If you saved JSON instead: return pd.read_json(path, orient="records")
     return pd.read_parquet(path)
  
