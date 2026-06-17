@@ -29,7 +29,7 @@ st.set_page_config(
 
 
 DATA_DIR = Path(__file__).parent / "data"
-file_path = DATA_DIR.glob("sim_results.parquet")
+file_path = next(DATA_DIR.glob("sim_results.parquet"))
  
 @st.cache_data
 def load_results(path: str = file_path) -> pd.DataFrame:
