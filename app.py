@@ -28,11 +28,10 @@ st.set_page_config(
 )
 
 
-DATA_DIR = Path(__file__).parent / "data"
-file_path = next(DATA_DIR.glob("sim_results.parquet"))
+DATA_DIR = Path(__file__).parent / "data" / "sim_results.parquet"
  
 @st.cache_data
-def load_results(path: str = file_path) -> pd.DataFrame:
+def load_results(path: str = DATA_DIR) -> pd.DataFrame:
     # If you saved JSON instead: return pd.read_json(path, orient="records")
     return pd.read_parquet(path)
  
