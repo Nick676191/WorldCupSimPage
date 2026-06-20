@@ -28,7 +28,7 @@ st.set_page_config(
 )
 
 
-DATA_DIR = Path(__file__).parent / "data" / "sim_results.parquet"
+DATA_DIR = Path(__file__).parent / "data" / "results_01_pre-tournament.parquet"
  
 @st.cache_data
 def load_results(path: str = DATA_DIR) -> pd.DataFrame:
