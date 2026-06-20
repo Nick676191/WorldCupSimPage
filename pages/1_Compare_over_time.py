@@ -8,10 +8,14 @@ shows up next to your existing home page with no extra wiring.
 Two views:
   1. One team tracked across snapshots, on whichever metrics you choose.
   2. Several teams compared across snapshots, on a single metric.
+
+Charts use Altair so the x-axis stays in chronological order (pre-tournament
+on the left, latest snapshot on the right). Every tooltip field declares its
+type explicitly (e.g. "Team:N") so Altair never has to guess.
 """
 
-import streamlit as st
 import altair as alt
+import streamlit as st
 
 from data_loader import METRIC_LABELS, load_snapshots, team_probabilities
 
@@ -61,8 +65,9 @@ if chosen:
         var_name="metric_key",
         value_name="prob",
     )
-    long["Metric"] = long["metric_key"].map(METRIC_LABELS)
- 
+    long["Metric"] = long["metric_key"].map(METRIC_LABELS).astype(str)
+    long["prob"] = long["prob"].astype(float)
+
     line = (
         alt.Chart(long)
         .mark_line(point=True)
@@ -70,34 +75,24 @@ if chosen:
             x=alt.X("Snapshot:N", sort=snapshot_order, title="Snapshot"),
             y=alt.Y("prob:Q", title="Probability", axis=alt.Axis(format="%")),
             color=alt.Color("Metric:N", title="Metric"),
-            tooltip=["Snapshot", "Metric", alt.Tooltip("prob:Q", format=".1%")],
+            tooltip=[
+                alt.Tooltip("Snapshot:N", title="Snapshot"),
+                alt.Tooltip("Metric:N", title="Metric"),
+                alt.Tooltip("prob:Q", title="Probability", format=".1%"),
+            ],
         )
     )
-    st.altair_chart(line, use_container_width=True)
- 
+    st.altair_chart(line, width="stretch")
+
     # Same numbers as a percentage table.
     table = one.set_index("Snapshot")[chosen].rename(columns=METRIC_LABELS)
     for col in table.columns:
         table[col] = (table[col] * 100).round(1).astype(str) + "%"
-    st.dataframe(table, use_container_width=True)
+    st.dataframe(table, width="stretch")
 else:
     st.info("Pick at least one metric to plot.")
- 
+
 st.divider()
-
-    # chart_df = one.set_index("Snapshot")[chosen].rename(columns=METRIC_LABELS)
-
-    # st.line_chart(chart_df)
-
-    # # Show the same numbers as a percentage table.
-    # table = chart_df.copy()
-    # for col in table.columns:
-    #     table[col] = (table[col] * 100).round(1).astype(str) + "%"
-    # st.dataframe(table, use_container_width=True)
-# else:
-#     st.info("Pick at least one metric to plot.")
-
-# st.divider()
 
 # --------------------------------------------------------------------------
 # View 2: several teams, one metric
@@ -125,26 +120,24 @@ picked = st.multiselect("Teams", teams, default=default_teams, key="multi_teams"
 if picked:
     sub = probs[probs["team"].astype(str).isin(picked)].sort_values("order").copy()
     sub["Snapshot"] = sub["snapshot"].astype(str)
-    sub["team"] = sub["team"].astype(str)
+    sub["Team"] = sub["team"].astype(str)
+    sub["prob"] = sub[metric].astype(float)
 
     line = (
         alt.Chart(sub)
         .mark_line(point=True)
         .encode(
             x=alt.X("Snapshot:N", sort=snapshots_in_order, title="Snapshot"),
-            y=alt.Y(f"{metric}:Q", title=METRIC_LABELS[metric], axis=alt.Axis(format="%")),
+            y=alt.Y("prob:Q", title=METRIC_LABELS[metric], axis=alt.Axis(format="%")),
             color=alt.Color("Team:N", title="Team"),
-            tooltip=["Snapshot", "Team", alt.Tooltip(f"{metric}:Q", format=".1%")],
+            tooltip=[
+                alt.Tooltip("Snapshot:N", title="Snapshot"),
+                alt.Tooltip("Team:N", title="Team"),
+                alt.Tooltip("prob:Q", title=METRIC_LABELS[metric], format=".1%"),
+            ],
         )
     )
-    st.altair_chart(line, use_container_width=True)
+    st.altair_chart(line, width="stretch")
     st.caption(f"Showing: {METRIC_LABELS[metric]}")
-
-    # wide = sub.pivot_table(
-    #     index="Snapshot", columns="team", values=metric, observed=True
-    # ).reindex(snapshots_in_order)
-
-    # st.line_chart(wide)
-    # st.caption(f"Showing: {METRIC_LABELS[metric]}")
 else:
     st.info("Pick at least one team to compare.")
