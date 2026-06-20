@@ -10,6 +10,7 @@ Run locally with:  streamlit run app.py
  
 import pandas as pd
 import streamlit as st
+import altair as alt
 
 import re
 from pathlib import Path
@@ -63,13 +64,29 @@ reach = {
     label: (team_df["furthest_stage"] >= stage).mean()
     for stage, label in STAGE_LABELS.items()
 }
-reach_df = (
-    pd.DataFrame(
-        {"Stage": list(reach.keys()), "Chance of reaching": list(reach.values())}
+reach_df = pd.DataFrame({"stage": list(reach.keys()), "prob": list(reach.values())})
+reach_chart = (
+    alt.Chart(reach_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("stage:N", sort="-y", title="Stage"),
+        y=alt.Y("prob:Q", title="Chance of reaching", axis=alt.Axis(format="%")),
+        tooltip=["stage", alt.Tooltip("prob:Q", title="Chance", format=".1%")],
     )
-    .set_index("Stage")
 )
-st.bar_chart(reach_df)
+st.altair_chart(reach_chart, use_container_width=True)
+# st.subheader(f"How far does {team} go?")
+# reach = {
+#     label: (team_df["furthest_stage"] >= stage).mean()
+#     for stage, label in STAGE_LABELS.items()
+# }
+# reach_df = (
+#     pd.DataFrame(
+#         {"Stage": list(reach.keys()), "Chance of reaching": list(reach.values())}
+#     )
+#     .set_index("Stage")
+# )
+# st.bar_chart(reach_df)
  
 # ---- A conditional probability example -----------------------------------
 won_group = team_df[team_df["group_pos"] == 1]
@@ -84,8 +101,25 @@ st.divider()
  
 # ---- Top 10 most likely champions ----------------------------------------
 st.subheader("Top 10 most likely champions")
-champ_prob = df[df["furthest_stage"] == 6]["team"].value_counts().head(10) / n_sims
-st.bar_chart(champ_prob.rename("Win probability"))
+champ_df = (
+    (df[df["furthest_stage"] == 6]["team"].value_counts().head(10) / n_sims)
+    .rename_axis("team")
+    .reset_index(name="prob")
+)
+champ_df["team"] = champ_df["team"].astype(str)
+champ_chart = (
+    alt.Chart(champ_df)
+    .mark_bar()
+    .encode(
+        x=alt.X("team:N", sort="-y", title="Team"),
+        y=alt.Y("prob:Q", title="Win probability", axis=alt.Axis(format="%")),
+        tooltip=["team", alt.Tooltip("prob:Q", title="Win probability", format=".1%")],
+    )
+)
+st.altair_chart(champ_chart, use_container_width=True)
+# st.subheader("Top 10 most likely champions")
+# champ_prob = df[df["furthest_stage"] == 6]["team"].value_counts().head(10) / n_sims
+# st.bar_chart(champ_prob.rename("Win probability"))
  
 # ---- Who reaches a chosen stage most often? ------------------------------
 st.subheader("Who reaches each stage most often?")
@@ -93,8 +127,33 @@ stage_choice = st.selectbox(
     "Stage", list(STAGE_LABELS.values()), index=3  # default: Semifinal
 )
 stage_value = {v: k for k, v in STAGE_LABELS.items()}[stage_choice]
-reach_prob = (
-    df[df["furthest_stage"] >= stage_value]["team"].value_counts().head(15) / n_sims
+reach_tbl = (
+    (df[df["furthest_stage"] >= stage_value]["team"].value_counts().head(15) / n_sims)
+    .rename_axis("team")
+    .reset_index(name="prob")
 )
-st.bar_chart(reach_prob.rename(f"Chance of reaching the {stage_choice}"))
+reach_tbl["team"] = reach_tbl["team"].astype(str)
+stage_chart = (
+    alt.Chart(reach_tbl)
+    .mark_bar()
+    .encode(
+        x=alt.X("team:N", sort="-y", title="Team"),
+        y=alt.Y(
+            "prob:Q",
+            title=f"Chance of reaching the {stage_choice}",
+            axis=alt.Axis(format="%"),
+        ),
+        tooltip=["team", alt.Tooltip("prob:Q", title="Chance", format=".1%")],
+    )
+)
+st.altair_chart(stage_chart, use_container_width=True)
+# st.subheader("Who reaches each stage most often?")
+# stage_choice = st.selectbox(
+#     "Stage", list(STAGE_LABELS.values()), index=3  # default: Semifinal
+# )
+# stage_value = {v: k for k, v in STAGE_LABELS.items()}[stage_choice]
+# reach_prob = (
+#     df[df["furthest_stage"] >= stage_value]["team"].value_counts().head(15) / n_sims
+# )
+# st.bar_chart(reach_prob.rename(f"Chance of reaching the {stage_choice}"))
  

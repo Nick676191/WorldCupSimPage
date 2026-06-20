@@ -11,6 +11,7 @@ Two views:
 """
 
 import streamlit as st
+import altair as alt
 
 from data_loader import METRIC_LABELS, load_snapshots, team_probabilities
 
@@ -52,19 +53,51 @@ chosen = st.multiselect(
 if chosen:
     one = probs[probs["team"].astype(str) == team].sort_values("order").copy()
     one["Snapshot"] = one["snapshot"].astype(str)
-    chart_df = one.set_index("Snapshot")[chosen].rename(columns=METRIC_LABELS)
+    snapshot_order = one["Snapshot"].tolist()  # chronological
 
-    st.line_chart(chart_df)
-
-    # Show the same numbers as a percentage table.
-    table = chart_df.copy()
+    long = one.melt(
+        id_vars=["Snapshot"],
+        value_vars=chosen,
+        var_name="metric_key",
+        value_name="prob",
+    )
+    long["Metric"] = long["metric_key"].map(METRIC_LABELS)
+ 
+    line = (
+        alt.Chart(long)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Snapshot:N", sort=snapshot_order, title="Snapshot"),
+            y=alt.Y("prob:Q", title="Probability", axis=alt.Axis(format="%")),
+            color=alt.Color("Metric:N", title="Metric"),
+            tooltip=["Snapshot", "Metric", alt.Tooltip("prob:Q", format=".1%")],
+        )
+    )
+    st.altair_chart(line, use_container_width=True)
+ 
+    # Same numbers as a percentage table.
+    table = one.set_index("Snapshot")[chosen].rename(columns=METRIC_LABELS)
     for col in table.columns:
         table[col] = (table[col] * 100).round(1).astype(str) + "%"
     st.dataframe(table, use_container_width=True)
 else:
     st.info("Pick at least one metric to plot.")
-
+ 
 st.divider()
+
+    # chart_df = one.set_index("Snapshot")[chosen].rename(columns=METRIC_LABELS)
+
+    # st.line_chart(chart_df)
+
+    # # Show the same numbers as a percentage table.
+    # table = chart_df.copy()
+    # for col in table.columns:
+    #     table[col] = (table[col] * 100).round(1).astype(str) + "%"
+    # st.dataframe(table, use_container_width=True)
+# else:
+#     st.info("Pick at least one metric to plot.")
+
+# st.divider()
 
 # --------------------------------------------------------------------------
 # View 2: several teams, one metric
@@ -94,11 +127,24 @@ if picked:
     sub["Snapshot"] = sub["snapshot"].astype(str)
     sub["team"] = sub["team"].astype(str)
 
-    wide = sub.pivot_table(
-        index="Snapshot", columns="team", values=metric, observed=True
-    ).reindex(snapshots_in_order)
-
-    st.line_chart(wide)
+    line = (
+        alt.Chart(sub)
+        .mark_line(point=True)
+        .encode(
+            x=alt.X("Snapshot:N", sort=snapshots_in_order, title="Snapshot"),
+            y=alt.Y(f"{metric}:Q", title=METRIC_LABELS[metric], axis=alt.Axis(format="%")),
+            color=alt.Color("Team:N", title="Team"),
+            tooltip=["Snapshot", "Team", alt.Tooltip(f"{metric}:Q", format=".1%")],
+        )
+    )
+    st.altair_chart(line, use_container_width=True)
     st.caption(f"Showing: {METRIC_LABELS[metric]}")
+
+    # wide = sub.pivot_table(
+    #     index="Snapshot", columns="team", values=metric, observed=True
+    # ).reindex(snapshots_in_order)
+
+    # st.line_chart(wide)
+    # st.caption(f"Showing: {METRIC_LABELS[metric]}")
 else:
     st.info("Pick at least one team to compare.")
